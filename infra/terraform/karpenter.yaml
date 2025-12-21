@@ -6,15 +6,15 @@ metadata:
 spec:
   amiSelectorTerms:
     - alias: bottlerocket@latest
-  role: ex-karpenter
+  role: fastfood-soat-eks-karpenter
   subnetSelectorTerms:
     - tags:
-        karpenter.sh/discovery: ex-karpenter
+        karpenter.sh/discovery: fastfood-soat-eks-karpenter
   securityGroupSelectorTerms:
     - tags:
-        karpenter.sh/discovery: ex-karpenter
+        karpenter.sh/discovery: fastfood-soat-eks-karpenter
   tags:
-    karpenter.sh/discovery: ex-karpenter
+    karpenter.sh/discovery: fastfood-soat-eks-karpenter
 ---
 apiVersion: karpenter.sh/v1
 kind: NodePool
