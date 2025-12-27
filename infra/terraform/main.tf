@@ -31,7 +31,7 @@ data "aws_ecrpublic_authorization_token" "token" {
 }
 
 locals {
-  name   = "my-test-${basename(path.cwd)}"
+  name   = "fastfood-soat-${basename(path.cwd)}"
   region = "us-east-1"
 
   vpc_cidr = "10.0.0.0/16"
