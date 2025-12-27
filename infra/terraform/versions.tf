@@ -1,7 +1,3 @@
-####
-# Terraform and Provider Versions
-####
-
 terraform {
   required_version = ">= 1.5.7"
 
@@ -13,6 +9,10 @@ terraform {
     helm = {
       source  = "hashicorp/helm"
       version = ">= 3.0"
+    }
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = ">= 1.14.0"
     }
   }
 }
