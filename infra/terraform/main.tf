@@ -1,261 +1,261 @@
-provider "aws" {
-  region = local.region
-}
+# provider "aws" {
+#   region = local.region
+# }
 
-provider "helm" {
-  kubernetes = {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+# provider "helm" {
+#   kubernetes = {
+#     host                   = module.eks.cluster_endpoint
+#     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
 
-    exec = {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      # This requires the awscli to be installed locally where Terraform is executed
-      args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
-    }
-  }
-}
+#     exec = {
+#       api_version = "client.authentication.k8s.io/v1beta1"
+#       command     = "aws"
+#       # This requires the awscli to be installed locally where Terraform is executed
+#       args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+#     }
+#   }
+# }
 
-data "aws_caller_identity" "current" {}
+# data "aws_caller_identity" "current" {}
 
-data "aws_availability_zones" "available" {
-  # Exclude local zones
-  filter {
-    name   = "opt-in-status"
-    values = ["opt-in-not-required"]
-  }
-}
+# data "aws_availability_zones" "available" {
+#   # Exclude local zones
+#   filter {
+#     name   = "opt-in-status"
+#     values = ["opt-in-not-required"]
+#   }
+# }
 
-data "aws_ecrpublic_authorization_token" "token" {
-  region = "us-east-1"
-}
+# data "aws_ecrpublic_authorization_token" "token" {
+#   region = "us-east-1"
+# }
 
-locals {
-  name   = "my-test-${basename(path.cwd)}"
-  region = "us-east-1"
+# locals {
+#   name   = "my-test-${basename(path.cwd)}"
+#   region = "us-east-1"
 
-  vpc_cidr = "10.0.0.0/16"
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+#   vpc_cidr = "10.0.0.0/16"
+#   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 
-  tags = {
-    Example    = local.name
-    GithubRepo = "terraform-aws-eks"
-    GithubOrg  = "terraform-aws-modules"
-  }
-}
+#   tags = {
+#     Example    = local.name
+#     GithubRepo = "terraform-aws-eks"
+#     GithubOrg  = "terraform-aws-modules"
+#   }
+# }
 
-################################################################################
-# EKS Module
-################################################################################
+# ################################################################################
+# # EKS Module
+# ################################################################################
 
-module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+# module "eks" {
+#   source = "terraform-aws-modules/eks/aws"
 
-  name               = local.name
-  kubernetes_version = "1.34"
+#   name               = local.name
+#   kubernetes_version = "1.34"
 
-  # Gives Terraform identity admin access to cluster which will
-  # allow deploying resources (Karpenter) into the cluster
-  enable_cluster_creator_admin_permissions = true
-  endpoint_public_access                   = true
+#   # Gives Terraform identity admin access to cluster which will
+#   # allow deploying resources (Karpenter) into the cluster
+#   enable_cluster_creator_admin_permissions = true
+#   endpoint_public_access                   = true
 
-  addons = {
-    coredns = {}
-    eks-pod-identity-agent = {
-      before_compute = true
-    }
-    kube-proxy = {}
-    vpc-cni = {
-      before_compute = true
-    }
-  }
+#   addons = {
+#     coredns = {}
+#     eks-pod-identity-agent = {
+#       before_compute = true
+#     }
+#     kube-proxy = {}
+#     vpc-cni = {
+#       before_compute = true
+#     }
+#   }
 
-  vpc_id                   = module.vpc.vpc_id
-  subnet_ids               = module.vpc.private_subnets
-  control_plane_subnet_ids = module.vpc.intra_subnets
+#   vpc_id                   = module.vpc.vpc_id
+#   subnet_ids               = module.vpc.private_subnets
+#   control_plane_subnet_ids = module.vpc.intra_subnets
 
-  eks_managed_node_groups = {
-    karpenter = {
-      ami_type       = "BOTTLEROCKET_ARM_64" # BOTTLEROCKET_ARM_64 / BOTTLEROCKET_x86_64
-      instance_types = ["m8g.large"]
+#   eks_managed_node_groups = {
+#     karpenter = {
+#       ami_type       = "BOTTLEROCKET_ARM_64" # BOTTLEROCKET_ARM_64 / BOTTLEROCKET_x86_64
+#       instance_types = ["m8g.medium"]
 
-      min_size     = 2
-      max_size     = 3
-      desired_size = 2
+#       min_size     = 2
+#       max_size     = 3
+#       desired_size = 2
 
-      labels = {
-        # Used to ensure Karpenter runs on nodes that it does not manage
-        "karpenter.sh/controller" = "true"
-      }
-    }
-  }
+#       labels = {
+#         # Used to ensure Karpenter runs on nodes that it does not manage
+#         "karpenter.sh/controller" = "true"
+#       }
+#     }
+#   }
 
-  node_security_group_tags = merge(local.tags, {
-    # NOTE - if creating multiple security groups with this module, only tag the
-    # security group that Karpenter should utilize with the following tag
-    # (i.e. - at most, only one security group should have this tag in your account)
-    "karpenter.sh/discovery" = local.name
-  })
+#   node_security_group_tags = merge(local.tags, {
+#     # NOTE - if creating multiple security groups with this module, only tag the
+#     # security group that Karpenter should utilize with the following tag
+#     # (i.e. - at most, only one security group should have this tag in your account)
+#     "karpenter.sh/discovery" = local.name
+#   })
 
-access_entries = {
+# access_entries = {
 
-    # Acesso para o usuário Kayky
-    # kayky = {
-    #   principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/kaykyfreitas"
+#     # Acesso para o usuário Kayky
+#     # kayky = {
+#     #   principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/kaykyfreitas"
 
-    #   policy_associations = {
-    #     admin = {
-    #       policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-    #       access_scope = {
-    #         type = "cluster"
-    #       }
-    #     }
-    #   }
-    # },
+#     #   policy_associations = {
+#     #     admin = {
+#     #       policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+#     #       access_scope = {
+#     #         type = "cluster"
+#     #       }
+#     #     }
+#     #   }
+#     # },
 
-    # Acesso para o usuário Root da conta
-    root = {
-      principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+#     # Acesso para o usuário Root da conta
+#     root = {
+#       principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
 
-      policy_associations = {
-        admin = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type = "cluster"
-          }
-        }
-      }
-    }
-  }
+#       policy_associations = {
+#         admin = {
+#           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+#           access_scope = {
+#             type = "cluster"
+#           }
+#         }
+#       }
+#     }
+#   }
 
-  tags = local.tags
-}
+#   tags = local.tags
+# }
 
-################################################################################
-# Karpenter
-################################################################################
+# ################################################################################
+# # Karpenter
+# ################################################################################
 
-module "karpenter" {
-  source = "terraform-aws-modules/eks/aws//modules/karpenter"
+# module "karpenter" {
+#   source = "terraform-aws-modules/eks/aws//modules/karpenter"
 
-  cluster_name = module.eks.cluster_name
+#   cluster_name = module.eks.cluster_name
 
-  # Name needs to match role name passed to the EC2NodeClass
-  node_iam_role_use_name_prefix   = false
-  node_iam_role_name              = local.name
-  create_pod_identity_association = true
+#   # Name needs to match role name passed to the EC2NodeClass
+#   node_iam_role_use_name_prefix   = false
+#   node_iam_role_name              = local.name
+#   create_pod_identity_association = true
 
-  # Used to attach additional IAM policies to the Karpenter node IAM role
-  node_iam_role_additional_policies = {
-    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  }
+#   # Used to attach additional IAM policies to the Karpenter node IAM role
+#   node_iam_role_additional_policies = {
+#     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+#   }
 
-  tags = local.tags
-}
+#   tags = local.tags
+# }
 
-module "karpenter_disabled" {
-  source = "terraform-aws-modules/eks/aws//modules/karpenter"
+# module "karpenter_disabled" {
+#   source = "terraform-aws-modules/eks/aws//modules/karpenter"
 
-  create = false
-}
+#   create = false
+# }
 
-################################################################################
-# Karpenter Helm chart & manifests
-# Not required; just to demonstrate functionality of the sub-module
-################################################################################
+# ################################################################################
+# # Karpenter Helm chart & manifests
+# # Not required; just to demonstrate functionality of the sub-module
+# ################################################################################
 
-resource "helm_release" "karpenter" {
-  namespace           = "kube-system"
-  name                = "karpenter"
-  repository          = "oci://public.ecr.aws/karpenter"
-  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  repository_password = data.aws_ecrpublic_authorization_token.token.password
-  chart               = "karpenter"
-  version             = "1.6.0"
-  wait                = false
+# resource "helm_release" "karpenter" {
+#   namespace           = "kube-system"
+#   name                = "karpenter"
+#   repository          = "oci://public.ecr.aws/karpenter"
+#   repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+#   repository_password = data.aws_ecrpublic_authorization_token.token.password
+#   chart               = "karpenter"
+#   version             = "1.6.0"
+#   wait                = false
 
-  values = [
-    <<-EOT
-    nodeSelector:
-      karpenter.sh/controller: 'true'
-    dnsPolicy: Default
-    settings:
-      clusterName: ${module.eks.cluster_name}
-      clusterEndpoint: ${module.eks.cluster_endpoint}
-      interruptionQueue: ${module.karpenter.queue_name}
-    webhook:
-      enabled: false
-    EOT
-  ]
-}
+#   values = [
+#     <<-EOT
+#     nodeSelector:
+#       karpenter.sh/controller: 'true'
+#     dnsPolicy: Default
+#     settings:
+#       clusterName: ${module.eks.cluster_name}
+#       clusterEndpoint: ${module.eks.cluster_endpoint}
+#       interruptionQueue: ${module.karpenter.queue_name}
+#     webhook:
+#       enabled: false
+#     EOT
+#   ]
+# }
 
-################################################################################
-# Supporting Resources
-################################################################################
+# ################################################################################
+# # Supporting Resources
+# ################################################################################
 
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 6.0"
+# module "vpc" {
+#   source  = "terraform-aws-modules/vpc/aws"
+#   version = "~> 6.0"
 
-  name = local.name
-  cidr = local.vpc_cidr
+#   name = local.name
+#   cidr = local.vpc_cidr
 
-  azs             = local.azs
-  private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)]
-  public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
-  intra_subnets   = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
+#   azs             = local.azs
+#   private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)]
+#   public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
+#   intra_subnets   = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
 
-  enable_nat_gateway = true
-  single_nat_gateway = true
+#   enable_nat_gateway = true
+#   single_nat_gateway = true
 
-  public_subnet_tags = {
-    "kubernetes.io/role/elb" = 1
-  }
+#   public_subnet_tags = {
+#     "kubernetes.io/role/elb" = 1
+#   }
 
-  private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = 1
-    # Tags subnets for Karpenter auto-discovery
-    "karpenter.sh/discovery" = local.name
-  }
+#   private_subnet_tags = {
+#     "kubernetes.io/role/internal-elb" = 1
+#     # Tags subnets for Karpenter auto-discovery
+#     "karpenter.sh/discovery" = local.name
+#   }
 
-  tags = local.tags
-}
+#   tags = local.tags
+# }
 
-resource "helm_release" "envoy_gateway" {
-  name             = "eg"
-  repository       = "oci://docker.io/envoyproxy"
-  chart            = "gateway-helm"
-  version          = "1.5.4"
-  namespace        = "envoy-gateway-system"
-  create_namespace = true
+# resource "helm_release" "envoy_gateway" {
+#   name             = "eg"
+#   repository       = "oci://docker.io/envoyproxy"
+#   chart            = "gateway-helm"
+#   version          = "1.5.4"
+#   namespace        = "envoy-gateway-system"
+#   create_namespace = true
 
-  # Garante que o Helm espere o deployment estar pronto
-  wait          = true
-  wait_for_jobs = true
-  timeout       = 300 # 5 minutos, igual ao seu comando 'wait'
+#   # Garante que o Helm espere o deployment estar pronto
+#   wait          = true
+#   wait_for_jobs = true
+#   timeout       = 300 # 5 minutos, igual ao seu comando 'wait'
 
-  depends_on = [module.eks]
-}
+#   depends_on = [module.eks]
+# }
 
-provider "kubectl" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  load_config_file       = false
+# provider "kubectl" {
+#   host                   = module.eks.cluster_endpoint
+#   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+#   load_config_file       = false
 
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
-  }
-}
+#   exec {
+#     api_version = "client.authentication.k8s.io/v1beta1"
+#     command     = "aws"
+#     args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+#   }
+# }
 
-data "kubectl_file_documents" "manifests" {
-  content = file("gateway.yaml")
-}
+# data "kubectl_file_documents" "manifests" {
+#   content = file("gateway.yaml")
+# }
 
-resource "kubectl_manifest" "apply_k8s_yaml" {
-  for_each  = data.kubectl_file_documents.manifests.manifests
-  yaml_body = each.value
+# resource "kubectl_manifest" "apply_k8s_yaml" {
+#   for_each  = data.kubectl_file_documents.manifests.manifests
+#   yaml_body = each.value
 
-  depends_on = [helm_release.envoy_gateway]
-}
+#   depends_on = [helm_release.envoy_gateway]
+# }
