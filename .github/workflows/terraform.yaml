@@ -42,14 +42,12 @@ jobs:
       - name: Read destroy config
         id: read-destroy-config
         run: |
-          # Garante que o jq falhe se o arquivo não existir ou o campo for nulo
-          DESTROY=$(jq -r '.["${{ inputs.environment }}"] // "false"' ./infra/terraform/destroy_config.json)
-          echo "destroy=$DESTROY" >> $GITHUB_OUTPUT
+          DESTROY="$(jq -r '.${{ inputs.environment }}' ./infra/terraform/destroy_config.json)"
+          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT
 
       - name: Terraform init
         run: |
-          cd infra/terraform
-          terraform init \
+          cd infra/terraform && terraform init \
             -backend-config="bucket=${{ secrets.aws-statefile-s3-bucket }}" \
             -backend-config="key=${{ github.event.repository.name }}" \
             -backend-config="region=${{ secrets.aws-region }}" \
@@ -60,27 +58,21 @@ jobs:
 
       - name: Terraform destroy
         if: steps.read-destroy-config.outputs.destroy == 'true'
-        id: terraform-destroy
-        run: |
-          cd infra/terraform
-          # Tenta selecionar o workspace. Se não existir, o destroy não deve criar um novo vazio,
-          # pois isso resultaria em "0 destroyed" e mascararia o sumiço do estado real.
-          terraform workspace select ${{ inputs.environment }}
+        id: terraform-destory
+        run: cd infra/terraform &&
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
           terraform destroy -var-file="./environment/${{ inputs.environment }}/terraform.tfvars" -auto-approve
 
       - name: Terraform plan
         if: steps.read-destroy-config.outputs.destroy != 'true'
         id: terraform-plan
-        run: |
-          cd infra/terraform
-          # -or-create garante que o workspace exista para novos deploys
-          terraform workspace select -or-create ${{ inputs.environment }}
+        run: cd infra/terraform &&
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
           terraform plan -var-file="./environment/${{ inputs.environment }}/terraform.tfvars" -out="${{ inputs.environment }}.plan"
 
       - name: Terraform apply
         if: steps.read-destroy-config.outputs.destroy != 'true'
         id: terraform-apply
-        run: |
-          cd infra/terraform
-          terraform workspace select ${{ inputs.environment }}
+        run: cd infra/terraform &&
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
           terraform apply "${{ inputs.environment }}.plan"
