@@ -1,5 +1,5 @@
 provider "aws" {
-  region = local.region
+  region = var.aws_region
 }
 
 provider "helm" {
@@ -10,8 +10,7 @@ provider "helm" {
     exec = {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
-      # This requires the awscli to be installed locally where Terraform is executed
-      args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+      args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.aws_region]
     }
   }
 }
@@ -26,13 +25,9 @@ data "aws_availability_zones" "available" {
   }
 }
 
-data "aws_ecrpublic_authorization_token" "token" {
-  region = "us-east-1"
-}
-
 locals {
   name   = "fastfood-soat-${basename(path.cwd)}"
-  region = "us-east-1"
+  region = var.aws_region
 
   vpc_cidr = "10.0.0.0/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
@@ -54,8 +49,6 @@ module "eks" {
   name               = local.name
   kubernetes_version = "1.34"
 
-  # Gives Terraform identity admin access to cluster which will
-  # allow deploying resources (Karpenter) into the cluster
   enable_cluster_creator_admin_permissions = true
   endpoint_public_access                   = true
 
@@ -84,36 +77,17 @@ module "eks" {
       desired_size = 2
 
       labels = {
-        # Used to ensure Karpenter runs on nodes that it does not manage
         "karpenter.sh/controller" = "true"
       }
     }
   }
 
   node_security_group_tags = merge(local.tags, {
-    # NOTE - if creating multiple security groups with this module, only tag the
-    # security group that Karpenter should utilize with the following tag
-    # (i.e. - at most, only one security group should have this tag in your account)
     "karpenter.sh/discovery" = local.name
   })
 
 access_entries = {
 
-    # Acesso para o usuário Kayky
-    # kayky = {
-    #   principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/kaykyfreitas"
-
-    #   policy_associations = {
-    #     admin = {
-    #       policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-    #       access_scope = {
-    #         type = "cluster"
-    #       }
-    #     }
-    #   }
-    # },
-
-    # Acesso para o usuário Root da conta
     root = {
       principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
 
@@ -168,8 +142,6 @@ resource "helm_release" "karpenter" {
   namespace           = "kube-system"
   name                = "karpenter"
   repository          = "oci://public.ecr.aws/karpenter"
-  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-  repository_password = data.aws_ecrpublic_authorization_token.token.password
   chart               = "karpenter"
   version             = "1.6.0"
   wait                = false
@@ -229,10 +201,9 @@ resource "helm_release" "envoy_gateway" {
   namespace        = "envoy-gateway-system"
   create_namespace = true
 
-  # Garante que o Helm espere o deployment estar pronto
   wait          = true
   wait_for_jobs = true
-  timeout       = 300 # 5 minutos, igual ao seu comando 'wait'
+  timeout       = 300 
 
   depends_on = [module.eks]
 }
@@ -245,7 +216,7 @@ provider "kubectl" {
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.aws_region]
   }
 }
 
