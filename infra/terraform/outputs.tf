@@ -128,3 +128,17 @@ output "oidc_provider_arn" {
   description = "ARN do OIDC Provider do EKS"
   value       = module.eks.oidc_provider_arn
 }
+
+################################################################################
+# IRSA Outputs
+################################################################################
+
+output "order_service_irsa_role_arn" {
+  description = "ARN da IAM Role do Order Service"
+  value       = module.order_service_irsa.iam_role_arn
+}
+
+output "order_service_irsa_role_name" {
+  description = "Nome da IAM Role do Order Service"
+  value       = module.order_service_irsa.iam_role_name
+}
