@@ -1,0 +1,23 @@
+# terraform.tfvars.example
+# Copie para terraform.tfvars e ajuste os valores
+
+environment = "dev"
+
+# RDS Configuration
+rds_instance_class          = "db.t3.micro"  
+rds_allocated_storage       = 20
+rds_engine_version          = "17.2"
+rds_database_name           = "fastfood"
+rds_username                = "postgres"
+rds_backup_retention_period = 7
+rds_skip_final_snapshot     = true   
+rds_multi_az                = false  
+
+# SQS Configuration
+sqs_visibility_timeout = 300
+sqs_message_retention  = 345600
+sqs_dlq_retention      = 1209600
+sqs_max_receive_count  = 3
+
+# Kubernetes
+kubernetes_namespace = "fastfood"
